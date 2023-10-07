@@ -11,7 +11,6 @@ Stream Locations FUSE Filesystem (Filesystem in Userspace) maps files from it so
 	-  [Mounting with fstab](#mounting-with-fstab)
 -  [Configuration](#configuration)
 -  [Troubleshooting](#troubleshooting)
--  [Roadmap](#roadmap)
 -  [Contributing](#contributing)
 -  [License](#license)
 
@@ -51,8 +50,12 @@ To use the Stream Locations FUSE Filesystem, follow these steps:
 To make the Stream Locations FUSE Filesystem mount at boot time or by a specific user, you can use the /etc/fstab file on Linux. Here's how to add an entry to mount it:
 
 1. Open a terminal.
-2. Edit the /etc/fstab file using a text editor with root privileges (e.g., sudo nano /etc/fstab).
-3. Add the following line to the /etc/fstab file, replacing the placeholders with your specific paths and options:
+2. Create a symbolic link to the `strmfs` script, which can be used by fstab
+```bash
+$ ln -s /path/to/strmfs /usr/sbin/mount.strmfs
+```
+3. Edit the /etc/fstab file using a text editor with root privileges (e.g., sudo nano /etc/fstab).
+4. Add the following line to the /etc/fstab file, replacing the placeholders with your specific paths and options:
 
 ```vim
 /path/to/source_dir  /path/to/destination_dir  fuse.strmfs  mount_options  0  0
@@ -114,3 +117,17 @@ Verify that your configuration file (config.yaml) is in the correct location (ei
 Double-check that you have installed the required Python libraries (fusepy and PyYAML) using pip. Update them if necessary.
 
 **If your issue persists or you encounter a different problem, please open an issue on our GitHub repository with detailed information about the problem you're experiencing.**
+
+## Contributing
+
+If you'd like to contribute to this project, please follow these guidelines:
+
+1. Fork the repository.
+2. Create a new branch for your feature or bug fix.
+3. Make your changes and test them thoroughly.
+4. Create a pull request with a clear description of your changes.
+
+Your pull request will be reviewed, and once approved, it will be merged into the main branch.
+
+## License
+This project is licensed under the MIT License.
