@@ -1,0 +1,147 @@
+#!/usr/bin/env python
+
+import argparse
+import os
+import platform
+import sys
+from io import BytesIO
+
+# Check the platform to determine FUSE library compatibility
+if platform.system() == "Linux":
+    try:
+        from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
+    except ImportError:
+        print("Please install the 'fusepy' library for Linux support.")
+        sys.exit(1)
+elif platform.system() == "Darwin":
+    try:
+        from macfuse import FUSE, Operations, LoggingMixIn
+    except ImportError:
+        print("Please install the 'macfusepy' library for macOS support.")
+        sys.exit(1)
+elif platform.system() == "Windows":
+    try:
+        from winfuse import FUSE, Operations, LoggingMixIn
+    except ImportError:
+        print("Please install the 'winfusepy' library for Windows support.")
+        sys.exit(1)
+
+class StrmFS(Operations,LoggingMixIn):
+
+    def __init__(self, source, file_types):
+        self.source = os.path.abspath(source)
+        self.file_types = file_types.split('+')
+
+    def _full_path(self, partial):
+        if partial.startswith("/"):
+            partial = partial[1:]
+        return os.path.join(self.source, partial)
+
+    def getattr(self, path, fh=None):
+        full_path = self._full_path(path.replace(".strm", ""))
+        st = os.lstat(full_path)
+        return { key: getattr(st, key) for key in ('st_atime', 'st_ctime', 'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid')}
+
+    def readdir(self, path, fh):
+        full_path = self._full_path(path)
+        with os.scandir(full_path) as entries:
+            yield '.'
+            yield '..'
+            for entry in entries:
+                if entry.is_file() and any(entry.name.endswith(file_type) for file_type in self.file_types):
+                    yield f"{entry.name}.strm"
+                elif entry.is_dir():
+                    yield entry.name
+
+    def statfs(self, path):
+        return {
+            'f_bsize': 4096,
+            'f_frsize': 4096,
+            'f_blocks': 1,
+            'f_bfree': 0,
+            'f_bavail': 0,
+            'f_files': 0,
+            'f_ffree': 0,
+            'f_favail': 0,
+            'f_flag': 4096,
+            'f_namemax': 255
+        }
+
+    def read(self, path, length, offset, fh):
+        if path.endswith('.strm'):
+            content = self._full_path(path.replace(".strm","")).encode('utf-8')
+            buf = BytesIO(content)
+            buf.seek(offset)
+            return buf.read(length)
+        else:
+            os.lseek(fh, offset, os.SEEK_SET)
+            return os.read(fh, length)
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Stream Locations FUSE Filesystem")
+    parser.add_argument("source", help="source device / path for FUSE filesystem")
+    parser.add_argument("destination", help="destination path for FUSE filesystem")
+    parser.add_argument("-o", "--mount-options", help="mount options (comma delimited) for FUSE filesystem", default=None)
+    return parser.parse_args()
+
+def parse_mount_options(options_str):
+    parsed_options = {
+        "allow_other": False,
+        "foreground": False,
+        "nothreads": True,
+        "file_types": "mp4+mkv+mov+m4v+mpg+mpeg+avi+flv+webm+wmv+vob+evo+m2ts+ts"         
+    }
+    if options_str is not None:
+        option_groups = options_str.split(',')
+    else:
+        option_groups = [] 
+    for group in option_groups:
+        parts = group.split("=")
+        if len(parts) == 2:
+            key, value = parts
+        else:
+            key, value = parts[0], True
+        parsed_options[key] = value
+    return parsed_options
+
+def find_config():
+    
+    # Check /etc/strmfs for system-wide config
+    system_config_path = os.path.join('/etc/strmfs', 'config.yaml')
+    if os.path.exists(system_config_path):
+        return system_config_path
+
+    # Check ~/.config/strmfs for user-specific config
+    user_config_path = os.path.join(os.path.expanduser("~"), '.config/strmfs', 'config.yaml')
+    if os.path.exists(user_config_path):
+        return user_config_path
+
+    return None  # No config found
+
+def read_config(config_path):
+    try:
+        with open(config_path, 'r') as config_file:
+            return yaml.safe_load(config_file)
+    except FileNotFoundError:
+        return {}
+
+def main():
+    
+    args = parse_arguments()
+
+    # Find the configuration file in standard XDG-compliant directories
+    config_path = find_config()
+    config = read_config(config_path) if config_path else {}
+
+    # Merge command-line options with config file options
+    mount_options = parse_mount_options(args.mount_options)
+    mount_options.update(config.get('mount_options', {}))
+
+    try:
+        fuse = FUSE(StrmFS(args.source, mount_options["file_types"]), args.destination, fsname=f'strmfs:{args.source}', nothreads=mount_options["nothreads"], foreground=mount_options["foreground"], allow_other=mount_options["allow_other"])
+    except Exception as e:
+        print("Error:", e)
+        sys.exit(1)
+
+if __name__ == '__main__':
+    main()
