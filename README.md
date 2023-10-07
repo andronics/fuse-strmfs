@@ -39,9 +39,9 @@ To use the Stream Locations FUSE Filesystem, follow these steps:
 1. Open a terminal and navigate to the project directory.
 2. Run the FUSE filesystem by executing the script.
 	```bash
-	$ ./strmfs  source_directory  destination_directory  -o  mount_options
+	$ ./strmfs  source_directory  dest_directory  -o  mount_options
 	```
-	Replace source_directory with the path to your media files, destination_directory with the path where you want to mount the filesystem, and mount_options with any optional FUSE mount options you want to specify.
+	Replace source_directory with the path to your media files, dest_directory with the path where you want to mount the filesystem, and mount_options with any optional FUSE mount options you want to specify.
 
 3. Access and stream your video files in .strm format from the mounted filesystem.
 
@@ -58,11 +58,11 @@ $ ln -s /path/to/strmfs /usr/sbin/mount.strmfs
 4. Add the following line to the /etc/fstab file, replacing the placeholders with your specific paths and options:
 
 ```vim
-/path/to/source_dir  /path/to/destination_dir  fuse.strmfs  mount_options  0  0
+/path/to/src_dir /path/to/dest_dir fuse.strmfs  mount_options  0  0
 ```
 
-* Replace /path/to/source_diry with the path to your source directory.
-* Replace /path/to/destination_dir with the path where you want to mount the filesystem.
+* Replace /path/to/src_dirwith the path to your source directory.
+* Replace /path/to/dest_dir with the path where you want to mount the filesystem.
 * Replace mount_options with any FUSE mount options you want to specify.
 
 4. Save and close the /etc/fstab file.
@@ -70,7 +70,7 @@ $ ln -s /path/to/strmfs /usr/sbin/mount.strmfs
 To test the new entry without rebooting, run the following command:
 
 ```bash
-sudo  mount  -a
+$ sudo mount -a
 ```
 
 This will attempt to mount all entries in /etc/fstab.
